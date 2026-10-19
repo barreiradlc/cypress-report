@@ -132,3 +132,81 @@
 .linkedinButton:hover {
   background-color: #0369a1;
 }
+
+/* Navigation */
+.nav {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin: 16px 0 24px 0;
+  flex-wrap: wrap;
+}
+
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.navLink:hover {
+  background-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+}
+
+/* Forms */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 360px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.field input {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  background-color: #0f172a;
+  color: #f8fafc;
+  font-size: 0.95rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: #87d3f3;
+}
+
+/* Misc */
+.hint {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.error {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: #f87171;
+}

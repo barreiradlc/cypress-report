@@ -1,11 +1,6 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import styles from './App.module.css';
-
-interface SocialLink {
-  label: string;
-  url: string;
-  isLinkedIn?: boolean;
-}
 
 const ABOUT_TEXT: string = `Hello, my name is Augusto Barreira, I am a Full Stack Developer with extensive experience in web and mobile development, working on both front-end and back-end. Throughout my career, I have had the opportunity to work at large companies such as PWC, Apple, and BairesDev, where I used modern technologies such as React.js, Next.js, Node.js, and Ruby on Rails, as well as databases such as PostgreSQL, MongoDB, and DynamoDB.
 
@@ -13,56 +8,174 @@ I have knowledge of microservices architecture, GraphQL, REST, and messaging wit
 
 I am a versatile professional with a leadership profile, committed to good software engineering practices and always seeking learning and technological updates.`;
 
-const SOCIAL_LINKS: SocialLink[] = [
-  {
-    label: 'GitHub',
-    url: 'http://github.com/barreiradlc',
-  },
-  {
-    label: 'LinkedIn',
-    url: 'https://www.linkedin.com/in/augusto-barreira-5b7362118/',
-    isLinkedIn: true,
-  },
-];
-
-export const AboutMePage: React.FC = () => {
+function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.container}>
       {/* Moving background */}
       <div className={styles.chessBackground} aria-hidden="true" />
 
-      {/* Profile Card */}
-      <main className={styles.card}>
-        <header className={styles.header}>
-          <h1 className={styles.name}>Augusto Barreira</h1>
-          <p className={styles.title}>Full Stack Developer</p>
-        </header>
+      <nav className={styles.nav} aria-label="Main navigation">
+        <Link to="/" data-cy="nav-home" className={styles.navLink}>
+          Home
+        </Link>
+        <Link to="/login" data-cy="nav-login" className={styles.navLink}>
+          Login
+        </Link>
+        <Link to="/products" data-cy="nav-products" className={styles.navLink}>
+          Products
+        </Link>
+        <Link to="/settings" data-cy="nav-settings" className={styles.navLink}>
+          Settings
+        </Link>
+      </nav>
 
+      {children}
+    </div>
+  );
+}
+
+function HomePage() {
+  return (
+    <Layout>
+      <header className={styles.header}>
+        <h1 className={styles.name}>Home</h1>
+        <p className={styles.title}>Cypress E2E demo application</p>
+      </header>
+      <main className={styles.card}>
         <section className={styles.bioSection}>
           <p className={styles.bioText}>{ABOUT_TEXT}</p>
         </section>
-
-        <footer className={styles.socialSection}>
-          <span className={styles.followText}>Follow me here:</span>
-          <div className={styles.linkGroup}>
-            {SOCIAL_LINKS.map((link) => (
-              <a
-                key={link.label}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`${styles.button} ${
-                  link.isLinkedIn ? styles.linkedinButton : ''
-                }`}
-              >
-                {link.label}
-              </a>
-            ))}
-          </div>
-        </footer>
       </main>
-    </div>
+    </Layout>
   );
-};
+}
 
-export default AboutMePage;
+function LoginPage() {
+  const navigate = useNavigate();
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [error, setError] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(false);
+    setLoading(true);
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      if (response.ok) {
+        navigate('/dashboard', { replace: true });
+      } else {
+        setError(true);
+      }
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Layout>
+      <header className={styles.header}>
+        <h1 className={styles.name}>Sign in</h1>
+      </header>
+      <main className={styles.card}>
+        <form className={styles.form} onSubmit={handleSubmit} data-cy="login-form">
+          <div className={styles.field}>
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              data-cy="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </div>
+          <div className={styles.field}>
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              data-cy="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </div>
+          <button type="submit" data-cy="login-submit" disabled={loading} className={styles.button}>
+            {loading ? 'Signing in…' : 'Sign in'}
+          </button>
+          <p className={styles.hint}>
+            Demo credentials: <code>user@example.com</code> / <code>correct-password</code>
+          </p>
+          {error && (
+            <p data-cy="error-message" role="alert" className={styles.error}>
+              Invalid credentials. Please try again.
+            </p>
+          )}
+        </form>
+      </main>
+    </Layout>
+  );
+}
+
+function DashboardPage() {
+  return (
+    <Layout>
+      <header className={styles.header}>
+        <h1 className={styles.name}>Dashboard</h1>
+      </header>
+      <main className={styles.card}>
+        <p data-cy="welcome-message">Welcome back! You are signed in.</p>
+      </main>
+    </Layout>
+  );
+}
+
+function ProductsPage() {
+  return (
+    <Layout>
+      <header className={styles.header}>
+        <h1 className={styles.name}>Products</h1>
+      </header>
+      <main className={styles.card}>
+        <p>Browse our product catalog. This page is covered by the smoke test.</p>
+      </main>
+    </Layout>
+  );
+}
+
+function SettingsPage() {
+  return (
+    <Layout>
+      <header className={styles.header}>
+        <h1 className={styles.name}>Settings</h1>
+      </header>
+      <main className={styles.card}>
+        <p>Manage your account settings. This page is covered by the smoke test.</p>
+      </main>
+    </Layout>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/products" element={<ProductsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}

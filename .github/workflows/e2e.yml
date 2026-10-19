@@ -1,0 +1,56 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  cypress:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Run Cypress
+        uses: cypress-io/github-action@v6
+        with:
+          build: npm run build
+          start: npm start
+          wait-on: 'http://localhost:3000'
+          wait-on-timeout: 120
+          browser: chrome
+
+      - name: Build HTML report
+        if: always()
+        run: |
+          npm run report:merge
+          npm run report:html
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-report
+          path: cypress/reports/html
+
+      - name: Upload screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+
+      - name: Upload videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-videos
+          path: cypress/videos

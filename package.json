@@ -1,17 +1,25 @@
 {
   "name": "cypress-report",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "description": "Demo app with Cypress E2E tests, Mochawesome HTML reports and a GitHub Actions pipeline that blocks broken UIs from merging.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "start": "node server.js",
+    "preview": "vite preview",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "cy:open": "cypress open",
+    "cy:run": "cypress run",
+    "report:merge": "mochawesome-merge cypress/reports/*.json > cypress/reports/merged.json",
+    "report:html": "marge cypress/reports/merged.json -f report -o cypress/reports/html"
   },
   "dependencies": {
+    "express": "^4.19.2",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^6.26.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -19,10 +27,14 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
+    "cypress": "^13.17.0",
     "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
+    "mochawesome": "^7.1.3",
+    "mochawesome-merge": "^4.3.0",
+    "mochawesome-report-generator": "^5.2.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.65.0",
     "vite": "^8.2.0"
