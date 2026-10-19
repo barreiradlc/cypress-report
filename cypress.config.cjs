@@ -1,8 +1,10 @@
 const { defineConfig } = require('cypress');
 
+const BASEURL = process.env.BASE_URL || 'http://localhost:5173';
+
 module.exports = defineConfig({
   e2e: {
-    baseUrl: 'http://localhost:3000',
+    baseUrl: BASEURL,
     specPattern: 'cypress/e2e/**/*.cy.js',
     video: true,
     screenshotOnRunFailure: true,
