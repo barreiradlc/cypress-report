@@ -144,7 +144,8 @@ Now if a commit breaks the interface, the pull request shows a red check and the
 
 * `package.json` uses `"type": "module"`, so the Cypress config is `cypress.config.cjs` (CommonJS `module.exports`) — a `.js` config would be treated as ESM and `module.exports` would throw.
 * `npm start` runs `node server.js` rather than `vite preview` because the login flow posts to `/api/login`, which is provided by the small Express mock API on port 3000. This keeps local, CI, and production-like behavior identical.
-* Headless browser runs require Cypress system dependencies. They were not executed in this sandbox (no package-install privileges), but they run on GitHub-hosted `ubuntu-latest` runners, which preinstall everything Cypress needs.
+* **Vite `base` must be `'/'`** (`vite.config.ts`). The built `index.html` bakes in asset paths, so if `base` points at a subpath (e.g. `/cypress-report/` for GitHub Pages) while the app is served at root (`http://localhost:3000`), the browser requests the wrong asset URLs, the React bundle never executes, and every E2E selector times out. Keep `base: '/'` for the E2E pipeline; adjust only if you change how the app is hosted.
+* Headless browser runs require Cypress system dependencies (e.g. on Ubuntu: `libnss3`, `libatk1.0-0`, `libgtk-3-0`, `libgbm1`, …). They run on GitHub-hosted `ubuntu-latest` runners, which preinstall everything Cypress needs. If you run locally and Cypress can't launch, install those system packages.
 
 ## License
 
