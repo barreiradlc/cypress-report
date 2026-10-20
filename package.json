@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "cy:open": "cypress open",
     "cy:run": "cypress run",
-    "report:merge": "mochawesome-merge cypress/reports/*.json > cypress/reports/merged.json",
+    "report:merge": "rm -f cypress/reports/merged.json && mochawesome-merge cypress/reports/*.json > cypress/reports/merged.json",
     "report:html": "marge cypress/reports/merged.json -f report -o cypress/reports/html"
   },
   "dependencies": {

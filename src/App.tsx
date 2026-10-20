@@ -8,27 +8,51 @@ I have knowledge of microservices architecture, GraphQL, REST, and messaging wit
 
 I am a versatile professional with a leadership profile, committed to good software engineering practices and always seeking learning and technological updates.`;
 
-function Layout({ children }: { children: React.ReactNode }) {
+function Header({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <header className={styles.header}>
+      <h1 className={styles.name}>{title}</h1>
+      {subtitle && <p className={styles.title}>{subtitle}</p>}
+    </header>
+  );
+}
+
+function Nav() {
+  return (
+    <nav className={styles.nav} aria-label="Main navigation">
+      <Link to="/" data-cy="nav-home" className={styles.navLink}>
+        Home
+      </Link>
+      <Link to="/login" data-cy="nav-login" className={styles.navLink}>
+        Login
+      </Link>
+      <Link to="/products" data-cy="nav-products" className={styles.navLink}>
+        Products
+      </Link>
+      <Link to="/settings" data-cy="nav-settings" className={styles.navLink}>
+        Settings
+      </Link>
+    </nav>
+  );
+}
+
+function Layout({
+  children,
+  title,
+  subtitle,
+}: {
+  children: React.ReactNode;
+  title: string;
+  subtitle?: string;
+}) {
   return (
     <div className={styles.container}>
       {/* Moving background */}
       <div className={styles.chessBackground} aria-hidden="true" />
-
-      <nav className={styles.nav} aria-label="Main navigation">
-        <Link to="/" data-cy="nav-home" className={styles.navLink}>
-          Home
-        </Link>
-        <Link to="/login" data-cy="nav-login" className={styles.navLink}>
-          Login
-        </Link>
-        <Link to="/products" data-cy="nav-products" className={styles.navLink}>
-          Products
-        </Link>
-        <Link to="/settings" data-cy="nav-settings" className={styles.navLink}>
-          Settings
-        </Link>
-      </nav>
-
+      <div className={styles.topBar}>
+        <Header title={title} subtitle={subtitle} />
+        <Nav />
+      </div>
       {children}
     </div>
   );
@@ -36,11 +60,7 @@ function Layout({ children }: { children: React.ReactNode }) {
 
 function HomePage() {
   return (
-    <Layout>
-      <header className={styles.header}>
-        <h1 className={styles.name}>Home</h1>
-        <p className={styles.title}>Cypress E2E demo application</p>
-      </header>
+    <Layout title="Home" subtitle="Cypress E2E demo application">
       <main className={styles.card}>
         <section className={styles.bioSection}>
           <p className={styles.bioText}>{ABOUT_TEXT}</p>
@@ -80,10 +100,7 @@ function LoginPage() {
   };
 
   return (
-    <Layout>
-      <header className={styles.header}>
-        <h1 className={styles.name}>Sign in</h1>
-      </header>
+    <Layout title="Sign in">
       <main className={styles.card}>
         <form className={styles.form} onSubmit={handleSubmit} data-cy="login-form">
           <div className={styles.field}>
@@ -114,7 +131,8 @@ function LoginPage() {
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
           <p className={styles.hint}>
-            Demo credentials: <code>user@example.com</code> / <code>correct-password</code>
+            Demo credentials: 
+            <code className={styles.hintCode}>Email: user@example.com <br />Password: correct-password</code>
           </p>
           {error && (
             <p data-cy="error-message" role="alert" className={styles.error}>
@@ -129,10 +147,7 @@ function LoginPage() {
 
 function DashboardPage() {
   return (
-    <Layout>
-      <header className={styles.header}>
-        <h1 className={styles.name}>Dashboard</h1>
-      </header>
+    <Layout title="Dashboard">
       <main className={styles.card}>
         <p data-cy="welcome-message">Welcome back! You are signed in.</p>
       </main>
@@ -142,10 +157,7 @@ function DashboardPage() {
 
 function ProductsPage() {
   return (
-    <Layout>
-      <header className={styles.header}>
-        <h1 className={styles.name}>Products</h1>
-      </header>
+    <Layout title="Products">
       <main className={styles.card}>
         <p>Browse our product catalog. This page is covered by the smoke test.</p>
       </main>
@@ -155,10 +167,7 @@ function ProductsPage() {
 
 function SettingsPage() {
   return (
-    <Layout>
-      <header className={styles.header}>
-        <h1 className={styles.name}>Settings</h1>
-      </header>
+    <Layout title="Settings">
       <main className={styles.card}>
         <p>Manage your account settings. This page is covered by the smoke test.</p>
       </main>
