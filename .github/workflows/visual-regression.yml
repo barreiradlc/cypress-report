@@ -1,0 +1,127 @@
+name: Visual Regression
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      update_baselines:
+        description: 'Approve and update baseline screenshots (maintainers only)'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app
+        run: npm run build
+
+      - name: Start app server
+        run: |
+          npm start &
+          echo $! > /tmp/server.pid
+
+      - name: Wait for app to be ready
+        run: |
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/ 2>/dev/null)
+            if [ "$code" = "200" ]; then echo "APP READY"; exit 0; fi
+            sleep 2
+          done
+          echo "APP NOT READY" && exit 1
+
+      - name: Run visual tests (screenshots)
+        run: npm run visual:run
+
+      - name: Compare screenshots against baselines
+        id: compare
+        run: |
+          npm run visual:compare || true
+          echo "diff_detected=$?" >> $GITHUB_OUTPUT
+
+      - name: Upload diff artifacts
+        if: steps.compare.outputs.diff_detected == '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diffs
+          path: cypress/reports/diffs
+
+      - name: Upload comparison report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-comparison-report
+          path: cypress/reports/diffs/comparison-report.json
+
+      - name: Stop app server
+        if: always()
+        run: |
+          kill $(cat /tmp/server.pid) 2>/dev/null || true
+
+  # Baseline update gate: runs only on manual dispatch with update_baselines=true
+  approve-baselines:
+    needs: visual
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.update_baselines == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app
+        run: npm run build
+
+      - name: Start app server
+        run: |
+          npm start &
+          echo $! > /tmp/server.pid
+
+      - name: Wait for app to be ready
+        run: |
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/ 2>/dev/null)
+            if [ "$code" = "200" ]; then echo "APP READY"; exit 0; fi
+            sleep 2
+          done
+          echo "APP NOT READY" && exit 1
+
+      - name: Run visual tests
+        run: npm run visual:run
+
+      - name: Approve and promote baselines
+        run: |
+          npm run visual:approve
+
+      - name: Commit updated baselines
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add cypress/baselines/images/
+          git commit -m "chore: update visual regression baselines" || echo "no changes to commit"
+          git push

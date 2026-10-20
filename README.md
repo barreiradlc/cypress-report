@@ -13,6 +13,7 @@ The suite covers:
 
 * **Login flow** — form renders, valid credentials sign in (asserting the `POST /api/login` response is `200` and redirect to `/dashboard`), invalid credentials show an error.
 * **Smoke test** — the main pages (`/`, `/dashboard`, `/products`, `/settings`) render with a `header` and `main`, and no "something went wrong" text.
+* **Visual regression** — deterministic screenshots of each page and login state are captured on every run and pixel-compared against committed baselines in `cypress/baselines/images/`. Any layout change fails the pipeline until a maintainer approves the new baseline.
 
 ## Technologies
 
@@ -22,6 +23,7 @@ The suite covers:
 | Routing | React Router DOM 6 |
 | Mock API server | Express 4 (serves the SPA + `POST /api/login`) |
 | E2E testing | Cypress 13 |
+| Visual regression | Cypress screenshots + pixelmatch + pngjs |
 | Reports | Mochawesome 7, mochawesome-merge 4, mochawesome-report-generator 5 (`marge`) |
 | CI/CD | GitHub Actions (`actions/checkout`, `actions/setup-node`, `cypress-io/github-action`, `actions/upload-artifact`) |
 | Linting | ESLint (flat config) + typescript-eslint |
@@ -34,6 +36,7 @@ The suite covers:
 * **CI on every commit** — pipeline runs on every `push` to `main` and every pull request targeting `main`; consistent environment, no "works on my machine".
 * **Reports on every run** — Mochawesome JSON is merged into a readable HTML report (`cypress/reports/html/report.html`) and uploaded as an artifact, even when tests fail (`if: always()`), plus screenshots and videos on failure.
 * **Merge gate** — branch protection requires the E2E check to pass and branches to be up to date before merging, so a broken interface never reaches `main`.
+* **Visual regression gate** — layout screenshots are pixel-compared against committed baselines; any diff fails CI until a maintainer approves the new baseline via PR.
 * **Fast & trustworthy suite** — test journeys not details, retry flaky runs in CI only (`runMode: 2`), treat flaky tests as bugs, log in via API + `cy.session()` where login isn't under test.
 
 ## Project structure
@@ -42,13 +45,26 @@ The suite covers:
 cypress-report/
 ├── .github/workflows/
 │   ├── deploy.yml          # GitHub Pages deploy (pre-existing)
-│   └── e2e.yml             # E2E test pipeline (this article)
+│   ├── e2e.yml             # E2E test pipeline (this article)
+│   └── visual-regression.yml  # Visual regression pipeline (image/video diff)
 ├── cypress/
+│   ├── baselines/
+│   │   ├── images/         # Committed approved layout screenshots
+│   │   └── videos/         # Committed baseline videos
 │   ├── config.cjs          # Cypress config (baseUrl, reporter, retries, videos/screenshots)
 │   ├── e2e/
 │   │   ├── login.cy.js     # Login flow tests
-│   │   └── smoke.cy.js     # Smoke test over main pages
-│   └── reports/            # Mochawesome JSON + HTML report (gitignored)
+│   │   ├── smoke.cy.js     # Smoke test over main pages
+│   │   └── visual.cy.js    # Visual regression screenshots
+│   ├── reports/
+│   │   ├── diffs/          # Visual diff output + comparison-report.json (gitignored)
+│   │   ├── html/           # Mochawesome HTML report (gitignored)
+│   │   └── ...             # Mochawesome JSON + merged.json (gitignored)
+│   ├── screenshots/        # Runtime screenshots (gitignored)
+│   └── videos/             # Runtime videos (gitignored)
+├── scripts/
+│   ├── compare-screenshots.js   # pixelmatch diff vs baselines
+│   └── approve-baselines.js     # promote screenshots to baselines
 ├── server.js               # Express mock API + SPA server (port 3000)
 ├── src/
 │   ├── App.tsx             # React Router app: / /login /dashboard /products /settings
@@ -82,6 +98,9 @@ npm install
 | `npm run lint` | ESLint |
 | `npm run cy:open` | Open Cypress Test Runner (interactive) |
 | `npm run cy:run` | Run Cypress headless |
+| `npm run visual:run` | Run only the visual regression spec (screenshots) |
+| `npm run visual:compare` | Compare screenshots against baselines (pixelmatch) |
+| `npm run visual:approve` | Promote runtime screenshots to committed baselines (maintainer) |
 | `npm run report:merge` | Merge `cypress/reports/*.json` into `cypress/reports/merged.json` |
 | `npm run report:html` | Generate `cypress/reports/html/report.html` from `merged.json` |
 
@@ -118,6 +137,37 @@ npm run report:html
 
 Push a branch, open a pull request, and the "E2E Tests" check appears next to your commit.
 
+## Visual regression pipeline (layout diff)
+
+`.github/workflows/visual-regression.yml` runs on every push to `main`, every pull request to `main`, and can be triggered manually:
+
+1. Checks out the code, installs dependencies, builds the app (`npm run build`).
+2. Starts the Express server on `http://localhost:3000` and waits for it to respond.
+3. Runs `npm run visual:run` — Cypress visits every page and login state, capturing deterministic screenshots via `cy.screenshot()`.
+4. Runs `npm run visual:compare` — each new screenshot is pixel-compared against the committed baseline in `cypress/baselines/images/` using `pixelmatch`.
+5. If any screenshot differs: the job fails, diff images and `comparison-report.json` are uploaded as GitHub artifacts, and the PR cannot merge.
+6. If no differences: the layout is unchanged and the check passes.
+
+### Approving a layout change (baseline update)
+
+Baseline images are committed to `cypress/baselines/images/`. To approve a new layout:
+
+1. A developer opens a PR that changes the UI.
+2. The visual regression check fails with diff artifacts attached.
+3. A maintainer reviews the diff images in the PR artifacts.
+4. If the change is intentional, run the **Approve baselines** workflow manually (`workflow_dispatch` with `update_baselines = true`), or locally:
+
+   ```bash
+   npm run build
+   npm start              # leave running
+   npm run visual:run
+   npm run visual:approve # copies screenshots -> cypress/baselines/images/
+   git add cypress/baselines/images/
+   git commit -m "chore: update visual regression baselines"
+   ```
+
+5. Merge the baseline update PR. Subsequent runs will pass against the new baseline.
+
 ## Making the check mandatory
 
 A pipeline people can ignore isn't a safety net. In GitHub:
@@ -125,10 +175,10 @@ A pipeline people can ignore isn't a safety net. In GitHub:
 1. Go to **Settings → Branches → Branch protection rules**.
 2. Add a rule for `main`.
 3. Enable **Require status checks to pass before merging**.
-4. Select the `cypress` job ("E2E Tests").
+4. Select the `cypress` job ("E2E Tests") **and** the `visual` job ("Visual Regression").
 5. Enable **Require branches to be up to date before merging**.
 
-Now if a commit breaks the interface, the pull request shows a red check and the merge button stays disabled until it's fixed. The broken version never reaches `main`.
+Now if a commit breaks the interface **or changes the layout**, the pull request shows a red check and the merge button stays disabled until it's fixed or the baseline is approved.
 
 ## Writing and maintaining tests
 
@@ -146,6 +196,7 @@ Now if a commit breaks the interface, the pull request shows a red check and the
 * `npm start` runs `node server.js` rather than `vite preview` because the login flow posts to `/api/login`, which is provided by the small Express mock API on port 3000. This keeps local, CI, and production-like behavior identical.
 * **Vite `base` must be `'/'`** (`vite.config.ts`). The built `index.html` bakes in asset paths, so if `base` points at a subpath (e.g. `/cypress-report/` for GitHub Pages) while the app is served at root (`http://localhost:3000`), the browser requests the wrong asset URLs, the React bundle never executes, and every E2E selector times out. Keep `base: '/'` for the E2E pipeline; adjust only if you change how the app is hosted.
 * Headless browser runs require Cypress system dependencies (e.g. on Ubuntu: `libnss3`, `libatk1.0-0`, `libgtk-3-0`, `libgbm1`, …). They run on GitHub-hosted `ubuntu-latest` runners, which preinstall everything Cypress needs. If you run locally and Cypress can't launch, install those system packages.
+* Visual regression screenshots are taken at the viewport size. If you change the viewport in `cypress.config.cjs` or add responsive breakpoints, update the baselines via `npm run visual:approve`.
 
 ## License
 

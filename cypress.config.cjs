@@ -8,6 +8,7 @@ module.exports = defineConfig({
     specPattern: 'cypress/e2e/**/*.cy.js',
     video: true,
     screenshotOnRunFailure: true,
+    screenshotOnReplay: false,
     retries: { runMode: 2, openMode: 0 },
   },
   reporter: 'mochawesome',
